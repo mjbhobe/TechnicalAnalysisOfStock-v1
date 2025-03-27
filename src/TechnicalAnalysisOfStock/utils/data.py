@@ -11,7 +11,7 @@ Author is not liable for any damages arising from direct/indirect use of this co
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
-import technical_indicators as ta
+import utils.ta as ta
 
 
 def download_stock_data(symbol: str, end_date: str = None, years: int = 5):
