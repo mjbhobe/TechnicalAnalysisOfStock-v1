@@ -1,0 +1,11 @@
+python-dotenv
+yfinance
+plotly
+rich
+pyyaml
+
+# LLMs & Frameworks
+llama-index
+agno
+google-generativeai
+
