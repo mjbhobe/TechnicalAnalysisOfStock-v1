@@ -11,10 +11,10 @@ Author is not liable for any damages arising from direct/indirect use of this co
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
-import utils.ta as ta
+import utils.technical_indicators as ta
 
 
-def download_stock_data(symbol: str, end_date: str = None, years: int = 5):
+def download_stock_data_and_tai(symbol: str, end_date: str = None, years: int = 5):
 
     def __download_data(_symbol: str, _start_date: str, _end_date: str, _interval: str):
         RENAMED_COLS = ["Close", "High", "Low", "Open", "Volume"]
@@ -30,6 +30,35 @@ def download_stock_data(symbol: str, end_date: str = None, years: int = 5):
         )
         df.columns = RENAMED_COLS
         df = df[COLS]
+
+        # calculate the indicators
+        df["EMA5"] = ta.ema(df["Close"], span=5)
+        df["EMA13"] = ta.ema(df["Close"], span=13)
+        df["EMA26"] = ta.ema(df["Close"], span=26)
+        df["EMA50"] = ta.ema(df["Close"], span=50)
+        df["EMA200"] = ta.ema(df["Close"], span=200)
+        # append bollinger bands & SMA
+        sma_line, upper_bb, lower_bb = ta.bollinger_bands(df["Close"])
+        df["BB_SMA"] = sma_line
+        df["BB_Upper"] = upper_bb
+        df["BB_Lower"] = lower_bb
+        # append MACD + signal + histogram
+        macd_line, signal_line, histogram = ta.macd(df["Close"])
+        df["MACD"] = macd_line
+        df["MACD_Signal"] = signal_line
+        df["MACD_Histo"] = histogram
+        # append RSI
+        df["RSI"] = ta.rsi(df["Close"])
+        # append Stochastic
+        stoch_perc_k, stoch_perc_d = ta.stochastic(df)
+        df["Stoch_K"] = stoch_perc_k
+        df["Stoch_D"] = stoch_perc_d
+        # append ADX
+        adx_line, adx_plus_di, adx_minus_di = ta.adx(df)
+        df["ADX"] = adx_line
+        df["ADX_Plus_Di"] = adx_plus_di
+        df["ADX_Minus_Di"] = adx_minus_di
+
         return df
 
     if end_date is None:
@@ -49,7 +78,7 @@ def download_stock_data(symbol: str, end_date: str = None, years: int = 5):
     return monthly_df, weekly_df, daily_df
 
 
-def download_stock_data_and_indicators(
+def download_stock_data_and_indicators2(
     symbol: str, end_date: str = None, years: int = 5
 ):
     """download 3 stock price series for 5 years at daily, weekly and monthly and appends

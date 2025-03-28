@@ -161,6 +161,21 @@ def stochastic(prices_ohlc: pd.DataFrame, k_window: int = 14, d_window: int = 3)
 
 
 def adx(prices_ohlc: pd.DataFrame, period: int = 14):
+    """
+    Calculate the Directional Movement Index (DMI) and ADX for a given DataFrame.
+    It helps traders determine if a trend exists and direction & strength of trend.
+        - If +DI > -DI - uptrend
+        - If +DI < -DI - downtrend
+        - If ADX is rising (> 20-25), trend is gaining strength
+        - If ADX < 20, weak or no trend
+
+    Args:
+        df (pd.DataFrame) - the OHLC prices dataframe
+        period (int) [optional, default 14] - the lookback period
+
+    Returns:
+        Tuple of pd.Series objects = (ADX line, +DI line and -DI line)
+    """
 
     assert (
         "Open" in prices_ohlc.columns
