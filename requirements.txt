@@ -3,6 +3,7 @@ yfinance
 plotly
 rich
 pyyaml
+streamlit
 
 # LLMs & Frameworks
 llama-index

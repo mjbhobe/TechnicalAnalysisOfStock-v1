@@ -8,15 +8,26 @@ Code is meant for illustration purposes ONLY. Use at your own risk!
 Author is not liable for any damages arising from direct/indirect use of this code.
 """
 
+from typing import Literal
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 import utils.technical_indicators as ta
 
 
-def download_stock_data_and_tai(symbol: str, end_date: str = None, years: int = 5):
+def download_stock_data_and_tai(
+    symbol: str,
+    time_period: Literal["Daily", "Weekly", "Monthly"],
+    end_date: str = None,
+    years: int = 5,
+):
 
-    def __download_data(_symbol: str, _start_date: str, _end_date: str, _interval: str):
+    def __download_data(
+        _symbol: str,
+        _start_date: str,
+        _end_date: str,
+        _interval: Literal["1d", "1wk", "1mo"],
+    ):
         RENAMED_COLS = ["Close", "High", "Low", "Open", "Volume"]
         COLS = ["Open", "High", "Low", "Close", "Volume"]
 
@@ -71,11 +82,20 @@ def download_stock_data_and_tai(symbol: str, end_date: str = None, years: int = 
     end_date_str = end_dt.strftime("%Y-%m-%d")
 
     # download data at various intervals
-    monthly_df = __download_data(symbol, start_date_str, end_date_str, "1mo")
-    weekly_df = __download_data(symbol, start_date_str, end_date_str, "1wk")
-    daily_df = __download_data(symbol, start_date_str, end_date_str, "1d")
+    # monthly_df = __download_data(symbol, start_date_str, end_date_str, "1mo")
+    # weekly_df = __download_data(symbol, start_date_str, end_date_str, "1wk")
+    # daily_df = __download_data(symbol, start_date_str, end_date_str, "1d")
+    __time_intervals = {
+        "Daily": "1d",
+        "Weekly": "1wk",
+        "Monthly": "1mo",
+    }
+    df = __download_data(
+        symbol, start_date_str, end_date_str, __time_intervals[time_period]
+    )
 
-    return monthly_df, weekly_df, daily_df
+    # return monthly_df, weekly_df, daily_df
+    return df
 
 
 def download_stock_data_and_indicators2(
