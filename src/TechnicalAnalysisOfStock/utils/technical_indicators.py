@@ -35,6 +35,13 @@ def sma(prices: pd.Series, window: int = 50) -> pd.Series:
     return prices.rolling(window=window).mean()
 
 
+def vwap(prices: pd.DataFrame) -> pd.Series:
+    vwap_values = (prices["Close"] * prices["Volume"]).cumsum() / prices[
+        "Volume"
+    ].cumsum()
+    return vwap_values
+
+
 def bollinger_bands(
     prices: pd.Series, window: int = 20, num_std: int = 2
 ) -> Tuple[pd.Series, pd.Series, pd.Series]:

@@ -4,6 +4,7 @@ plotly
 rich
 pyyaml
 streamlit
+kaleido
 
 # LLMs & Frameworks
 llama-index
