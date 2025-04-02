@@ -17,84 +17,53 @@ import utils.technical_indicators as ta
 
 def download_stock_data_and_tai(
     symbol: str,
-    time_period: Literal["Daily", "Weekly", "Monthly"],
-    end_date: str = None,
-    years: int = 5,
+    start_date: str,
+    end_date: str,
 ):
-
-    def __download_data(
-        _symbol: str,
-        _start_date: str,
-        _end_date: str,
-        _interval: Literal["1d", "1wk", "1mo"],
-    ):
-        RENAMED_COLS = ["Close", "High", "Low", "Open", "Volume"]
-        COLS = ["Open", "High", "Low", "Close", "Volume"]
-
-        df = yf.download(
-            _symbol,
-            start=_start_date,
-            end=_end_date,
-            interval=_interval,
-            auto_adjust=True,
-            progress=False,
-        )
-        df.columns = RENAMED_COLS
-        df = df[COLS]
-
-        # calculate the indicators
-        df["EMA5"] = ta.ema(df["Close"], span=5)
-        df["EMA13"] = ta.ema(df["Close"], span=13)
-        df["EMA26"] = ta.ema(df["Close"], span=26)
-        df["EMA50"] = ta.ema(df["Close"], span=50)
-        df["EMA200"] = ta.ema(df["Close"], span=200)
-        # append bollinger bands & SMA
-        sma_line, upper_bb, lower_bb = ta.bollinger_bands(df["Close"])
-        df["BB_SMA"] = sma_line
-        df["BB_Upper"] = upper_bb
-        df["BB_Lower"] = lower_bb
-        # append MACD + signal + histogram
-        macd_line, signal_line, histogram = ta.macd(df["Close"])
-        df["MACD"] = macd_line
-        df["MACD_Signal"] = signal_line
-        df["MACD_Histo"] = histogram
-        # append RSI
-        df["RSI"] = ta.rsi(df["Close"])
-        # append Stochastic
-        stoch_perc_k, stoch_perc_d = ta.stochastic(df)
-        df["Stoch_K"] = stoch_perc_k
-        df["Stoch_D"] = stoch_perc_d
-        # append ADX
-        adx_line, adx_plus_di, adx_minus_di = ta.adx(df)
-        df["ADX"] = adx_line
-        df["ADX_Plus_Di"] = adx_plus_di
-        df["ADX_Minus_Di"] = adx_minus_di
-
-        return df
-
-    if end_date is None:
-        end_dt = datetime.today()
-    else:
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-
-    start_date = end_dt - timedelta(days=years * 365)
-    start_date_str = start_date.strftime("%Y-%m-%d")
-    end_date_str = end_dt.strftime("%Y-%m-%d")
-
-    # download data at various intervals
-    # monthly_df = __download_data(symbol, start_date_str, end_date_str, "1mo")
-    # weekly_df = __download_data(symbol, start_date_str, end_date_str, "1wk")
-    # daily_df = __download_data(symbol, start_date_str, end_date_str, "1d")
-    __time_intervals = {
-        "Daily": "1d",
-        "Weekly": "1wk",
-        "Monthly": "1mo",
-    }
-    df = __download_data(
-        symbol, start_date_str, end_date_str, __time_intervals[time_period]
+    # downlods
+    df = yf.download(
+        symbol,
+        start_date,
+        end_date,
+        progress=False,
+        auto_adjust=True,
     )
+    RENAMED_COLS = ["Close", "High", "Low", "Open", "Volume"]
+    COLS = ["Open", "High", "Low", "Close", "Volume"]
 
-    # return monthly_df, weekly_df, daily_df
+    df.columns = RENAMED_COLS
+    df = df[COLS]
+
+    # calculate the indicators
+    # EMAs & VWAP
+    df["EMA5"] = ta.ema(df["Close"], span=5)
+    df["EMA13"] = ta.ema(df["Close"], span=13)
+    df["EMA26"] = ta.ema(df["Close"], span=26)
+    df["EMA50"] = ta.ema(df["Close"], span=50)
+    df["EMA200"] = ta.ema(df["Close"], span=200)
+    df["VWAP"] = ta.vwap(df)
+    # Bollinger Bands
+    sma_line, upper_bb, lower_bb = ta.bollinger_bands(df["Close"])
+    df["BB_SMA"] = sma_line
+    df["BB_Upper"] = upper_bb
+    df["BB_Lower"] = lower_bb
+    # MACD & Histogram
+    macd_line, signal_line, histogram = ta.macd(df["Close"])
+    df["MACD"] = macd_line
+    df["MACD_Signal"] = signal_line
+    df["MACD_Histo"] = histogram
+    # RSI
+    df["RSI"] = ta.rsi(df["Close"])
+    # Stochastic
+    stoch_perc_k, stoch_perc_d = ta.stochastic(df)
+    df["Stoch_K"] = stoch_perc_k
+    df["Stoch_D"] = stoch_perc_d
+    # ADX
+    adx_line, adx_plus_di, adx_minus_di = ta.adx(df)
+    df["ADX"] = adx_line
+    df["ADX_Plus_Di"] = adx_plus_di
+    df["ADX_Minus_Di"] = adx_minus_di
+
     return df
 
 

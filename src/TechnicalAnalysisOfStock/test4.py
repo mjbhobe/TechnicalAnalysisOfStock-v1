@@ -133,6 +133,8 @@ def plot_stock_chart(df, symbol, indicators):
                 name="Bollinger Lower",
                 line=dict(color="rgb(12, 50, 153)"),
                 yaxis="y1",
+                fill="tonexty",
+                fillcolor="rgba(12, 50, 153, 0.25)",
             )
         )
         fig.add_trace(
@@ -145,17 +147,17 @@ def plot_stock_chart(df, symbol, indicators):
                 yaxis="y1",
             )
         )
-        fig.add_trace(
-            go.Scatter(
-                x=df.index,
-                y=df["BB_Upper"],
-                fill="tonexty",
-                fillcolor="rgba(12, 50, 153, 0.35)",
-                line=dict(color="rgba(0,0,0,0)"),
-                showlegend=False,
-                yaxis="y1",
-            )
-        )
+        # fig.add_trace(
+        #     go.Scatter(
+        #         x=df.index,
+        #         y=df["BB_Upper"],
+        #         fill="tonexty",
+        #         fillcolor="rgba(12, 50, 153, 0.25)",
+        #         line=dict(color="rgba(0,0,0,0)"),
+        #         showlegend=False,
+        #         yaxis="y1",
+        #     )
+        # )
     if "Volume" in indicators:
         fig.add_trace(
             go.Bar(
@@ -285,6 +287,7 @@ def plot_stock_chart(df, symbol, indicators):
     # Update layout
     fig.update_layout(
         title=f"{symbol} Stock Chart",
+        height=1000,
         xaxis_rangeslider_visible=False,
         yaxis1=dict(title="Price", domain=[0.7, 1], side="right"),
         yaxis2=dict(
