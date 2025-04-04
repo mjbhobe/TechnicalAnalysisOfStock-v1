@@ -62,7 +62,7 @@ indicators = st.sidebar.multiselect(
         "ADX/DMI",
         "VWAP",
     ],
-    default=["Bollinger Bands"],
+    default=["Bollinger Bands", "Volume"],
 )
 
 # Button to fetch data for all tickers
@@ -162,6 +162,8 @@ if "stock_data" in st.session_state and st.session_state["stock_data"]:
         ]  # fmt: on
         num_rows = len(subplot_titles)
 
+        fig = go.Figure()
+
         fig = make_subplots(
             rows=num_rows,
             cols=1,
@@ -258,21 +260,26 @@ if "stock_data" in st.session_state and st.session_state["stock_data"]:
             )
 
         if "Volume" in indicators:
-            volume_colors = [
-                (
-                    "rgba(49,130,117,0.35)"
-                    if df["Close"].iloc[i] >= df["Open"].iloc[i]
-                    else "rgba(242,54,69,0.35)"
-                )
-                for i in range(len(df))
-            ]
+            # volume_colors = [
+            #     (
+            #         # "rgba(49,130,117,0.35)"
+            #         # if df["Close"].iloc[i] >= df["Open"].iloc[i]
+            #         # else "rgba(242,54,69,0.35)"
+            #         "rgb(49, 130, 117)" if v >= 0 else "rgb(242, 54, 69)"
+            #         for v in df["Volume"].diff().fillna(0)
+            #     )
+            #     #  for i in range(len(df))
+            # ]
             fig.add_trace(
                 go.Bar(
                     x=df.index,
                     y=df["Volume"],
                     name="Volume",
-                    marker_color=volume_colors,
-                    opacity=1,
+                    marker_color=[
+                        "rgb(49, 130, 117)" if v >= 0 else "rgb(242, 54, 69)"
+                        for v in df["Volume"].diff().fillna(0).values.ravel()
+                    ],
+                    opacity=0.30,
                 ),
                 row=2,
                 col=1,
@@ -376,6 +383,282 @@ if "stock_data" in st.session_state and st.session_state["stock_data"]:
         #         "action": "Error",
         #         "justification": f"General Error: {e}. Raw response text: {response.text}",
         #     }
+
+        return fig
+
+    def plot_technical_chart(ticker, df, indicators):
+        fig = go.Figure()
+
+        # OHLC + EMAs + Bollinger Bands + Volume (Row 1)
+
+        fig.add_trace(
+            go.Candlestick(
+                x=df.index,
+                open=df["Open"],
+                high=df["High"],
+                low=df["Low"],
+                close=df["Close"],
+                name="Candlesticks",
+                yaxis="y1",
+            )
+        )
+        if "EMA5" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["EMA5"],
+                    mode="lines",
+                    name="EMA 5",
+                    line=dict(color="green"),
+                    yaxis="y1",
+                )
+            )
+        if "EMA13" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["EMA13"],
+                    mode="lines",
+                    name="EMA 13",
+                    line=dict(color="blue"),
+                    yaxis="y1",
+                )
+            )
+        if "EMA26" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["EMA26"],
+                    mode="lines",
+                    name="EMA 26",
+                    line=dict(color="gray"),
+                    yaxis="y1",
+                )
+            )
+        if "EMA50" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["EMA50"],
+                    mode="lines",
+                    name="EMA 50",
+                    line=dict(color="pink", width=2),
+                    yaxis="y1",
+                )
+            )
+        if "EMA200" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["EMA200"],
+                    mode="lines",
+                    name="EMA 200",
+                    line=dict(color="purple", width=2),
+                    yaxis="y1",
+                )
+            )
+        if "Bollinger Bands" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["BB_Upper"],
+                    mode="lines",
+                    name="Bollinger Upper",
+                    line=dict(color="rgb(12, 50, 153)"),
+                    yaxis="y1",
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["BB_Lower"],
+                    mode="lines",
+                    name="Bollinger Lower",
+                    line=dict(color="rgb(12, 50, 153)"),
+                    yaxis="y1",
+                    fill="tonexty",
+                    fillcolor="rgba(12, 50, 153, 0.25)",
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["BB_SMA"],
+                    mode="lines",
+                    name="Bollinger SMA",
+                    line=dict(color="red"),
+                    yaxis="y1",
+                )
+            )
+            # fig.add_trace(
+            #     go.Scatter(
+            #         x=df.index,
+            #         y=df["BB_Upper"],
+            #         fill="tonexty",
+            #         fillcolor="rgba(12, 50, 153, 0.25)",
+            #         line=dict(color="rgba(0,0,0,0)"),
+            #         showlegend=False,
+            #         yaxis="y1",
+            #     )
+            # )
+        if "Volume" in indicators:
+            fig.add_trace(
+                go.Bar(
+                    x=df.index,
+                    y=df["Volume"],
+                    name="Volume",
+                    yaxis="y2",
+                    marker_color=[
+                        "rgb(49, 130, 117)" if v >= 0 else "rgb(242, 54, 69)"
+                        for v in df["Volume"].diff().fillna(0).values.ravel()
+                    ],
+                    opacity=0.35,
+                )
+            )
+
+        # MACD (Row 2)
+        if "MACD" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index, y=df["MACD"], mode="lines", name="MACD", yaxis="y3"
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["MACD_Signal"],
+                    mode="lines",
+                    name="MACD Signal",
+                    yaxis="y3",
+                )
+            )
+            fig.add_trace(
+                go.Bar(
+                    x=df.index,
+                    y=df["MACD_Histo"],
+                    name="MACD Histogram",
+                    yaxis="y3",
+                    marker_color=[
+                        "green" if v >= 0 else "red" for v in df["MACD_Histo"]
+                    ],
+                )
+            )
+
+        # RSI (Row 3)
+        if "RSI" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index, y=df["RSI"], mode="lines", name="RSI", yaxis="y4"
+                )
+            )
+            fig.add_shape(
+                type="rect",
+                xref="x",
+                yref="y4",
+                x0=df.index.min(),
+                y0=30,
+                x1=df.index.max(),
+                y1=60,
+                fillcolor="pink",
+                opacity=0.3,
+                layer="below",
+                line_width=0,
+            )
+            fig.add_hline(y=40, line_dash="dash", line_color="pink", yaxis="y4")
+
+        # Stochastic (Row 4)
+        if "Stochastic" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["Stoch_K"],
+                    mode="lines",
+                    name="Stochastic %K",
+                    yaxis="y5",
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["Stoch_D"],
+                    mode="lines",
+                    name="Stochastic %D",
+                    yaxis="y5",
+                )
+            )
+            fig.add_shape(
+                type="rect",
+                xref="x",
+                yref="y5",
+                x0=df.index.min(),
+                y0=20,
+                x1=df.index.max(),
+                y1=80,
+                fillcolor="pink",
+                opacity=0.3,
+                layer="below",
+                line_width=0,
+            )
+
+        # ADX/DMI (Row 5)
+        if "ADX/DMI" in indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["ADX"],
+                    mode="lines",
+                    name="ADX",
+                    yaxis="y6",
+                    line=dict(color="black"),
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["ADX_Plus_Di"],
+                    mode="lines",
+                    name="+DI",
+                    yaxis="y6",
+                    line=dict(color="green"),
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=df.index,
+                    y=df["ADX_Minus_Di"],
+                    mode="lines",
+                    name="-DI",
+                    yaxis="y6",
+                    line=dict(color="red"),
+                )
+            )
+
+        # Update layout
+        fig.update_layout(
+            title=f"{ticker} Technical Chart",
+            height=1000,
+            xaxis_rangeslider_visible=False,
+            yaxis1=dict(title="Price", domain=[0.7, 1], side="right"),
+            yaxis2=dict(
+                title="Volume",
+                overlaying="y1",
+                side="left",
+                position=0,
+                domain=[0.7, 1],
+            ),
+            yaxis3=dict(title="MACD", domain=[0.5, 0.68], side="right"),
+            yaxis4=dict(title="RSI", domain=[0.3, 0.48], side="right"),
+            yaxis5=dict(title="Stochastic", domain=[0.1, 0.28], side="right"),
+            yaxis6=dict(title="ADX/DMI", domain=[0, 0.08], side="right"),
+            yaxis_title_standoff=15,
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            margin=dict(l=50, r=50, t=50, b=50),
+            xaxis=dict(
+                rangeslider=dict(visible=True, thickness=0.01), domain=[0, 0.95]
+            ),
+            # yaxis_range_slider=dict(visible=True, thickness=0.01),
+        )
 
         return fig
 

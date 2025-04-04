@@ -6,7 +6,9 @@ from io import BytesIO
 from PIL import Image
 import google.generativeai as genai
 import os
+from datetime import datetime, timedelta
 
+import utils.technical_indicators as ta
 from utils.download_data import download_stock_data_and_tai
 
 # Configure Google Generative AI
@@ -27,20 +29,52 @@ def validate_symbol(symbol):
 
 
 # Function to fetch stock data
-def fetch_stock_data(symbol, periods):
-    data = {}
-    for period in periods:
-        data[period] = download_stock_data_and_tai(symbol, period)
-        # if period == "Daily":
-        #     df = yf.download(symbol, period="1d")
-        # elif period == "Monthly":
-        #     df = yf.download(symbol, period="1mo")
-        # elif period == "Yearly":
-        #     df = yf.download(symbol, period="1y")
-        # else:
-        #     continue
-        # data[period] = df
-    return data
+def fetch_stock_data(ticker, start_date, end_date, indicators) -> pd.DataFrame:
+    df = yf.download(
+        ticker,
+        start_date,
+        end_date,
+        progress=False,
+        auto_adjust=True,
+    )
+
+    # add indicators chosen by user
+    for indicator in indicators:
+        if indicator == "EMA5":
+            df["EMA5"] = ta.ema(df["Close"], span=5)
+        if indicator == "EMA13":
+            df["EMA13"] = ta.ema(df["Close"], span=13)
+        if indicator == "EMA26":
+            df["EMA26"] = ta.ema(df["Close"], span=26)
+        if indicator == "EMA50":
+            df["EMA50"] = ta.ema(df["Close"], span=50)
+        if indicator == "EMA200":
+            df["EMA200"] = ta.ema(df["Close"], span=200)
+        if indicator == "VWAP":
+            df["VWAP"] = ta.vwap(df)
+        if indicator == "Bollinger Bands":
+            sma_line, upper_bb, lower_bb = ta.bollinger_bands(df["Close"])
+            df["BB_SMA"] = sma_line
+            df["BB_Upper"] = upper_bb
+            df["BB_Lower"] = lower_bb
+        if indicator == "MACD":
+            macd_line, signal_line, histogram = ta.macd(df["Close"])
+            df["MACD"] = macd_line
+            df["MACD_Signal"] = signal_line
+            df["MACD_Histo"] = histogram
+        if indicator == "RSI":
+            df["RSI"] = ta.rsi(df["Close"])
+        if indicator == "Stochastic":
+            stoch_perc_k, stoch_perc_d = ta.stochastic(df)
+            df["Stoch_K"] = stoch_perc_k
+            df["Stoch_D"] = stoch_perc_d
+        if indicator == "ADX":
+            adx_line, adx_plus_di, adx_minus_di = ta.adx(df)
+            df["ADX"] = adx_line
+            df["ADX_Plus_Di"] = adx_plus_di
+            df["ADX_Minus_Di"] = adx_minus_di
+
+    return df
 
 
 # Function to plot the chart
@@ -55,7 +89,7 @@ def plot_stock_chart(df, symbol, indicators):
             high=df["High"],
             low=df["Low"],
             close=df["Close"],
-            name="OHLC",
+            name="Candlesticks",
             yaxis="y1",
         )
     )
@@ -167,7 +201,7 @@ def plot_stock_chart(df, symbol, indicators):
                 yaxis="y2",
                 marker_color=[
                     "rgb(49, 130, 117)" if v >= 0 else "rgb(242, 54, 69)"
-                    for v in df["Volume"].diff().fillna(0)
+                    for v in df["Volume"].diff().fillna(0).values.ravel()
                 ],
                 opacity=0.35,
             )
@@ -318,20 +352,22 @@ def generate_recommendation(images):
 
 # Streamlit app
 def main():
-    st.sidebar.title("Stock Chart Analysis")
+    st.sidebar.title("Configuration")
 
-    symbol = st.sidebar.text_input("Enter Stock Symbol", "AAPL")
+    ticker = st.sidebar.text_input("Enter Stock Symbol", "AAPL")
     if st.sidebar.button("Validate"):
-        valid, message = validate_symbol(symbol)
+        valid, message = validate_symbol(ticker)
         if valid:
-            st.sidebar.success(f"Symbol {symbol} validated. Company Name: {message}")
+            st.sidebar.success(f"Symbol {ticker} validated. Company Name: {message}")
         else:
             st.sidebar.error(message)
 
-    periods = st.sidebar.multiselect(
-        "Select Time Periods", ["Daily", "Monthly", "Yearly"], default=["Daily"]
-    )
+    end_date_default = datetime.today()
+    start_date_default = end_date_default - timedelta(days=365)
+    start_date = st.sidebar.date_input("Start Date", value=start_date_default)
+    end_date = st.sidebar.date_input("End Date", value=end_date_default)
 
+    st.sidebar.subheader("Technical Indicators")
     indicators = st.sidebar.multiselect(
         "Select Indicators",
         [
@@ -347,30 +383,37 @@ def main():
             "RSI",
             "ADX/DMI",
         ],
+        default=["Bollinger Bands", "Volume"],
     )
 
     if st.sidebar.button("Generate Charts"):
-        if not periods:
-            st.sidebar.error("Please select at least one time period.")
-        else:
-            data = fetch_stock_data(symbol, periods)
-            for period, df in data.items():
-                st.subheader(f"{symbol} Stock Chart ({period})")
-                fig = plot_stock_chart(df, symbol, indicators)
-                st.plotly_chart(fig, use_container_width=True)
+        df = fetch_stock_data(ticker, start_date, end_date, indicators)
+        fig = plot_stock_chart(df, ticker, indicators)
+        st.subheader(f"Analysis for {ticker}")
+        st.plotly_chart(fig)
+        st.write("**LLM analysis will appear here!**")
 
-            generate_recommendation_button = st.button(
-                "Generate Recommendation", disabled=False if data else True
-            )
-            if generate_recommendation_button:
-                images = []
-                for period, df in data.items():
-                    fig = plot_stock_chart(df, symbol, indicators)
-                    img_bytes = fig.to_image(format="png")
-                    img = Image.open(BytesIO(img_bytes))
-                    images.append(img)
-                recommendation = generate_recommendation(images)
-                st.write(recommendation)
+        # if not periods:
+        #     st.sidebar.error("Please select at least one time period.")
+        # else:
+        #     data = fetch_stock_data(symbol, periods)
+        #     for period, df in data.items():
+        #         st.subheader(f"{symbol} Stock Chart ({period})")
+        #         fig = plot_stock_chart(df, symbol, indicators)
+        #         st.plotly_chart(fig, use_container_width=True)
+
+        #     generate_recommendation_button = st.button(
+        #         "Generate Recommendation", disabled=False if data else True
+        #     )
+        #     if generate_recommendation_button:
+        #         images = []
+        #         for period, df in data.items():
+        #             fig = plot_stock_chart(df, symbol, indicators)
+        #             img_bytes = fig.to_image(format="png")
+        #             img = Image.open(BytesIO(img_bytes))
+        #             images.append(img)
+        #         recommendation = generate_recommendation(images)
+        #         st.write(recommendation)
 
 
 if __name__ == "__main__":
