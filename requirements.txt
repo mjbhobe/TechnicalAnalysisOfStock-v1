@@ -8,6 +8,7 @@ kaleido
 bokeh
 selenium
 pillow
+mplfinance
 
 # LLMs & Frameworks
 llama-index
