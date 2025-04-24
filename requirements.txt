@@ -5,6 +5,9 @@ rich
 pyyaml
 streamlit
 kaleido
+bokeh
+selenium
+pillow
 
 # LLMs & Frameworks
 llama-index
